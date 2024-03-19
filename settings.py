@@ -1,2 +1,2 @@
-SSID = SalaTI
-password = edupublica
+SSID = "SalaTI"
+password = "edupublica"
