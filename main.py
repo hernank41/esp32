@@ -1,1 +1,1 @@
-print('Datos de la red: ', wlan.ifconfig())
+print('Datos  de la red: ', wlan.ifconfig())
