@@ -17,8 +17,15 @@ from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
 import dht, machine
+import json
+import btree
 
 d = dht.DHT22(machine.Pin(25))
+a = []
+setpoint = 0
+periodo = 0
+modo = 0
+
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -29,8 +36,11 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('Kisiel/temperatura', 1)
-    await client.subscribe('Kisiel/humedad', 1)
+    await client.subscribe('24dcc399d76c/setpoint', 1)
+    await client.subscribe('24dcc399d76c/periodo', 1)
+    await client.subscribe('24dcc399d76c/destello', 1)
+    await client.subscribe('24dcc399d76c/modo', 1)
+    await client.subscribe('24dcc399d76c/rele', 1)
 
 async def main(client):
     await client.connect()
@@ -39,16 +49,17 @@ async def main(client):
     while True:
         try:
             d.measure()
+            a[0] = d.temperature()
+            a[1] = d.humidity()
+            a[2] = setpoint
+            a[3] = periodo
+            a[4] = modo
+            b = json.loads(a)
             try:
                 temperatura=d.temperature()
-                await client.publish('Kisiel/temperatura', '{}'.format(temperatura), qos = 1)
+                await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
             except OSError as e:
                 print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('Kisiel/humedad', '{}'.format(humedad), qos = 1)
-            except OSError as e:
-                print("sin sensor humedad")
         except OSError as e:
             print("sin sensor")
         await asyncio.sleep(20)  # Broker is slow
