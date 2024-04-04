@@ -27,7 +27,7 @@ periodo = 0
 modo = 0
 
 
-def sub_cb(topic, msg, retained):
+'''def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
 
 async def wifi_han(state):
@@ -40,12 +40,34 @@ async def conn_han(client):
     await client.subscribe('24dcc399d76c/periodo', 1)
     await client.subscribe('24dcc399d76c/destello', 1)
     await client.subscribe('24dcc399d76c/modo', 1)
-    await client.subscribe('24dcc399d76c/rele', 1)
+    await client.subscribe('24dcc399d76c/rele', 1)'''
+
+async def messages(client):  # Respond to incoming messages
+    async for topic, msg, retained in client.queue:
+        print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
+        if (topic.decode() == '24dcc399d76c/setpoint'):
+            print("anda")
+            setpoint = msg.decode()
+        
+
+async def up(client):  # Respond to connectivity being (re)established
+    while True:
+        await client.up.wait()  # Wait on an Event
+        client.up.clear()
+        await client.subscribe('24dcc399d76c/setpoint', 1)
+        await client.subscribe('24dcc399d76c/periodo', 1)
+        await client.subscribe('24dcc399d76c/destello', 1)
+        await client.subscribe('24dcc399d76c/modo', 1)
+        await client.subscribe('24dcc399d76c/rele', 1)
 
 async def main(client):
     await client.connect()
     n = 0
     await asyncio.sleep(2)  # Give broker time
+
+    for coroutine in (up, messages):
+        asyncio.create_task(coroutine(client))
+
     while True:
         try:
             d.measure()
@@ -67,6 +89,8 @@ async def main(client):
             print("sin sensor")
         await asyncio.sleep(20)  # Broker is slow
 
+
+'''
 # Define configuration
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
@@ -81,3 +105,11 @@ try:
 finally:
     client.close()
     asyncio.new_event_loop()
+'''
+config["queue_len"] = 1  # Use event interface with default queue size
+MQTTClient.DEBUG = False  # Optional: print diagnostic messages
+client = MQTTClient(config)
+try:
+    asyncio.run(main(client))
+finally:
+    client.close()  # Prevent LmacRxBlk:1 errors
