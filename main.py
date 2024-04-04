@@ -2,23 +2,35 @@ from mqtt_as import MQTTClient, config
 import asyncio
 from settings import SSID, password, BROKER
 import dht, machine
+import json
 
-d = dht.DHT22(machine.Pin(13))
+d = dht.DHT22(machine.Pin(25))
 # Local configuration
 config['server'] = BROKER  # Change to suit
 config['ssid'] = SSID
 config['wifi_pw'] = password
 
+setpoint = 0
+periodo = 0
+modo = 0
+
 async def messages(client):  # Respond to incoming messages
     async for topic, msg, retained in client.queue:
-        print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
+        #print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
+        if (topic.decode() == '24dcc399d76c/setpoint'):
+            setpoint = msg.decode()
+            print("anda setpoint")
+            print(setpoint)
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
         await client.up.wait()  # Wait on an Event
         client.up.clear()
-        await client.subscribe('topico/temperatura', 1)  # renew subscriptions
-        await client.subscribe('topico/humedad', 1)  # renew subscriptions
+        await client.subscribe('24dcc399d76c/setpoint', 1)
+        await client.subscribe('24dcc399d76c/periodo', 1)
+        await client.subscribe('24dcc399d76c/destello', 1)
+        await client.subscribe('24dcc399d76c/modo', 1)
+        await client.subscribe('24dcc399d76c/rele', 1)
 
 async def main(client):
     await client.connect()
@@ -28,16 +40,20 @@ async def main(client):
     while True:
         try:
             d.measure()
+            
             try:
-                temperatura=d.temperature()
-                await client.publish('topico/temperatura', '{}'.format(temperatura), qos = 1)
+                dato = {
+                't':d.temperature(),
+                'h':d.humidity(),
+                's':setpoint,
+                'p':periodo,
+                'm':modo
+                }
+                b = json.dumps(dato)
+                await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
             except OSError as e:
                 print("sin sensor temperatura")
-            try:
-                humedad=d.humidity()
-                await client.publish('topico/humedad', '{}'.format(humedad), qos = 1)
-            except OSError as e:
-                print("sin sensor humedad")
+
         except OSError as e:
             print("sin sensor")
         await asyncio.sleep(10) 
