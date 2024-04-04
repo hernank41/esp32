@@ -49,14 +49,17 @@ async def main(client):
     while True:
         try:
             d.measure()
-            a[0] = d.temperature()
-            a[1] = d.humidity()
-            a[2] = setpoint
-            a[3] = periodo
-            a[4] = modo
-            b = json.loads(a)
+            
+            
             try:
-                temperatura=d.temperature()
+                dato = {
+                't':d.temperature(),
+                'h':d.humidity(),
+                's':setpoint,
+                'p':periodo,
+                'm':modo
+                }
+                b = json.dumps(dato)
                 await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
             except OSError as e:
                 print("sin sensor temperatura")
