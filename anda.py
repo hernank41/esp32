@@ -3,7 +3,6 @@ import asyncio
 from settings import SSID, password, BROKER
 import dht, machine
 import json
-from time import sleep
 from machine import Pin
 
 d = dht.DHT22(machine.Pin(25))
@@ -12,39 +11,19 @@ config['server'] = BROKER  # Change to suit
 config['ssid'] = SSID
 config['wifi_pw'] = password
 
-temperatura = 0
-humedad = 0
 setpoint = 0
 periodo = 0
 modo = 0
-rele = 0
-destello = 0
-led = Pin(2, Pin.OUT)
 
-x = {
-  "temperatura": 0,
-  "humedad": 0,
-  "setpoint": 0,
-  "periodo ": 0,
-  "modo": 0
-}
+led = Pin(2, Pin.OUT)
 
 async def messages(client):  # Respond to incoming messages
     async for topic, msg, retained in client.queue:
         #print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
         if (topic.decode() == '24dcc399d76c/setpoint'):
             setpoint = msg.decode()
-            x.update({"setpoint",setpoint})
-        if (topic.decode() == '24dcc399d76c/periodo'):
-            periodo = msg.decode()
-            x.update({"periodo",periodo})
-        if (topic.decode() == '24dcc399d76c/modo'):
-            modo = msg.decode()
-            x.update({"modo",modo})
-        if (topic.decode() == '24dcc399d76c/rele'):
-            rele = msg.decode()
-        if (topic.decode() == '24dcc399d76c/destello'):
-            destello = msg.decode()            
+            print("anda setpoint")
+            print(setpoint)
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
@@ -66,24 +45,18 @@ async def main(client):
             d.measure()
             
             try:
-                x.update({"temeperatura",d.temperature()})
-                x.update({"humedad",d.humidity()})
-                b = json.dumps(x)
+                dato = {
+                't':d.temperature(),
+                'h':d.humidity(),
+                's':setpoint,
+                'p':periodo,
+                'm':modo
+                }
+                b = json.dumps(dato)
                 await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
-            
-                if (rele == 1):
-                    pinRele = 1
-                else:
-                    if (x[temeperatura] > x[setpoint]):
-                        pinRele = 1
-                if (destello == 1):
-                    led.value(not led.value())
-                    sleep(1)
-                    led.value(not led.value())
-                    destello = 0
-
             except OSError as e:
                 print("sin sensor temperatura")
+
         except OSError as e:
             print("sin sensor")
         await asyncio.sleep(10) 
