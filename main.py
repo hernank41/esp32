@@ -86,13 +86,13 @@ async def main(client):
                 else:
                     if (x["temperatura"] > x["setpoint"]):
                         print("rele")
-                '''
+                
                 if (destello == 1):
                     led.value(not led.value())
                     sleep(2)
                     led.value(not led.value())
                     destello = 0
-                '''
+                
             except OSError as e:
                 print("sin sensor temperatura")
         except OSError as e:
