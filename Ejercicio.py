@@ -19,32 +19,45 @@ periodo = 0
 modo = 0
 rele = 0
 destello = 0
+
 led = Pin(2, Pin.OUT)
+rele1 = Pin(13, Pin.OUT)
 
 x = {
   "temperatura": 0,
   "humedad": 0,
   "setpoint": 0,
-  "periodo ": 0,
+  "periodo": 0,
   "modo": 0
 }
 
+
 async def messages(client):  # Respond to incoming messages
+    global rele
+    global destello
     async for topic, msg, retained in client.queue:
         #print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
         if (topic.decode() == '24dcc399d76c/setpoint'):
-            setpoint = msg.decode()
-            x.update({"setpoint",setpoint})
+            setpoint = float(msg.decode())
+            print(setpoint)
+            #x.update({"setpoint",setpoint})
+            x["setpoint"] = setpoint
         if (topic.decode() == '24dcc399d76c/periodo'):
-            periodo = msg.decode()
-            x.update({"periodo",periodo})
+            periodo = float(msg.decode())
+            x["periodo"] = periodo
+            print(periodo)
+            #x.update({"periodo",periodo})
         if (topic.decode() == '24dcc399d76c/modo'):
-            modo = msg.decode()
-            x.update({"modo",modo})
+            modo = float(msg.decode())
+            x["modo"] = modo
+            print(setpmodooint)
+            #x.update({"modo",modo})
         if (topic.decode() == '24dcc399d76c/rele'):
-            rele = msg.decode()
+            rele = float(msg.decode())
+            print(rele)
         if (topic.decode() == '24dcc399d76c/destello'):
-            destello = msg.decode()            
+            destello = float(msg.decode())
+            print(destello)       
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
@@ -57,6 +70,8 @@ async def up(client):  # Respond to connectivity being (re)established
         await client.subscribe('24dcc399d76c/rele', 1)
 
 async def main(client):
+    global destello
+    global rele
     await client.connect()
     for coroutine in (up, messages):
         asyncio.create_task(coroutine(client))
@@ -66,22 +81,25 @@ async def main(client):
             d.measure()
             
             try:
-                x.update({"temeperatura",d.temperature()})
-                x.update({"humedad",d.humidity()})
+                x.update({"temperatura":d.temperature()})
+                x.update({"humedad":d.humidity()})
                 b = json.dumps(x)
                 await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
-            
-                if (rele == 1):
-                    pinRele = 1
+
+
+                print(rele)
+                if (rele == 1 and x["modo"] == 0):
+                    rele1.value(not rele1.value())
                 else:
-                    if (x[temeperatura] > x[setpoint]):
-                        pinRele = 1
+                    if (x["temperatura"] > x["setpoint"] and x["modo"] == 1):
+                        rele1.value(not rele1.value())
+                
                 if (destello == 1):
                     led.value(not led.value())
-                    sleep(1)
+                    sleep(2)
                     led.value(not led.value())
                     destello = 0
-
+                
             except OSError as e:
                 print("sin sensor temperatura")
         except OSError as e:
