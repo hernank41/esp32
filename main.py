@@ -67,6 +67,7 @@ async def up(client):  # Respond to connectivity being (re)established
         await client.subscribe('24dcc399d76c/rele', 1)
 
 async def main(client):
+    global destello
     await client.connect()
     for coroutine in (up, messages):
         asyncio.create_task(coroutine(client))
@@ -89,8 +90,10 @@ async def main(client):
                 
                 if (destello == 1):
                     led.value(not led.value())
+                    print("LED prendido")
                     sleep(2)
                     led.value(not led.value())
+                    print("LED apagado")
                     destello = 0
                 
             except OSError as e:
