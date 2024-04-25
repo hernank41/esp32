@@ -21,17 +21,20 @@ rele = 0
 destello = 0
 
 led = Pin(2, Pin.OUT)
-pinRele = 0
+rele1 = Pin(13, Pin.OUT)
 
 x = {
   "temperatura": 0,
   "humedad": 0,
-  "setpoint": 150,
+  "setpoint": 0,
   "periodo": 0,
   "modo": 0
 }
 
+
 async def messages(client):  # Respond to incoming messages
+    global rele
+    global destello
     async for topic, msg, retained in client.queue:
         #print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
         if (topic.decode() == '24dcc399d76c/setpoint'):
@@ -68,6 +71,7 @@ async def up(client):  # Respond to connectivity being (re)established
 
 async def main(client):
     global destello
+    global rele
     await client.connect()
     for coroutine in (up, messages):
         asyncio.create_task(coroutine(client))
@@ -81,19 +85,19 @@ async def main(client):
                 x.update({"humedad":d.humidity()})
                 b = json.dumps(x)
                 await client.publish('24dcc399d76c', '{}'.format(b), qos = 1)
-                
-                if (rele == 1):
-                    pinRele = 1
+
+
+                print(rele)
+                if (rele == 1 and x["modo"] == 0):
+                    rele1.value(not rele1.value())
                 else:
-                    if (x["temperatura"] > x["setpoint"]):
-                        print("rele")
+                    if (x["temperatura"] > x["setpoint"] and x["modo"] == 1):
+                        rele1.value(not rele1.value())
                 
                 if (destello == 1):
                     led.value(not led.value())
-                    print("LED prendido")
                     sleep(2)
                     led.value(not led.value())
-                    print("LED apagado")
                     destello = 0
                 
             except OSError as e:
