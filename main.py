@@ -34,7 +34,7 @@ async def conn_han(client):
 
 async def main(client):
     await client.connect()
-    n = 0
+    n = 0   
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
@@ -60,7 +60,7 @@ async def main(client):
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = True
+config['ssl'] = False
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
