@@ -60,11 +60,12 @@ async def main(client):
 config['subs_cb'] = sub_cb
 config['connect_coro'] = conn_han
 config['wifi_coro'] = wifi_han
-config['ssl'] = False
+config['ssl'] = True
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
+
 try:
     asyncio.run(main(client))
 finally:
