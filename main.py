@@ -16,10 +16,10 @@
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import dht, machine, json
+import machine
 from collections import OrderedDict
 
-d = dht.DHT22(machine.Pin(25))
+led = machine.Pin(2, machine.Pin.OUT)
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
@@ -30,7 +30,12 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe(config['client_id'], 1)
+    await client.subscribe('led', 1)
+    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
+    if (msg.decode()):
+        led.value(True) 
+    else:
+        led.value(False) 
 
 async def main(client):
     await client.connect()
@@ -38,16 +43,12 @@ async def main(client):
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
-            d.measure()
             try:
-                temperatura=d.temperature()
-                try:
-                    humedad=d.humidity()
-                    datos=json.dumps(OrderedDict([
-                        ('temperatura',temperatura),
-                        ('humedad',humedad)
-                    ]))
-                    await client.publish('iot/2024/24dcc399d76c', datos, qos = 1)
+                try: 
+                    if (led.value()):
+                        await client.publish('led2', 'true', qos = 1)
+                    else:
+                        await client.publish('led2', 'flase', qos = 1)
                 except OSError as e:
                     print("sin sensor temperatura")
             except OSError as e:
