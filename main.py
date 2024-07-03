@@ -1,28 +1,24 @@
-# (C) Copyright Peter Hinch 2017-2019.
-# Released under the MIT licence.
-
-# This demo publishes to topic "result" and also subscribes to that topic.
-# This demonstrates bidirectional TLS communication.
-# You can also run the following on a PC to verify:
-# mosquitto_sub -h test.mosquitto.org -t result
-# To get mosquitto_sub to use a secure connection use this, offered by @gmrza:
-# mosquitto_sub -h <my local mosquitto server> -t result -u <username> -P <password> -p 8883
-
-# Public brokers https://github.com/mqtt/mqtt.github.io/wiki/public_brokers
-
-# red LED: ON == WiFi fail
-# green LED heartbeat: demonstrates scheduler is running.
-
 from mqtt_as import MQTTClient
 from mqtt_local import config
 import uasyncio as asyncio
-import machine
-from collections import OrderedDict
+import dht, machine, json
 
+d = dht.DHT22(machine.Pin(25))
+x = {
+  "temperatura": 0,
+  "humedad": 0,
+}
 led = machine.Pin(2, machine.Pin.OUT)
+led.value(False)
 
 def sub_cb(topic, msg, retained):
     print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
+    if (topic.decode() == '/sensores_remoto/24dcc399d76c/led'):
+        led_valor = msg.decode()
+        if(msg.decode() == 'true'):
+            led.value(True)
+        else:
+            led.value(False)
 
 async def wifi_han(state):
     print('Wifi is ', 'up' if state else 'down')
@@ -30,32 +26,28 @@ async def wifi_han(state):
 
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
-    await client.subscribe('led', 1)
-    print('Topic = {} -> Valor = {}'.format(topic.decode(), msg.decode()))
-    if (msg.decode()):
-        led.value(True) 
-    else:
-        led.value(False) 
+    await client.subscribe('/sensores_remoto/24dcc399d76c', 1)
+    await client.subscribe('/sensores_remoto/24dcc399d76c/led', 1)
+
+
 
 async def main(client):
     await client.connect()
-    n = 0   
+    n = 0
     await asyncio.sleep(2)  # Give broker time
     while True:
         try:
+            d.measure()
             try:
-                try: 
-                    if (led.value()):
-                        await client.publish('led2', 'true', qos = 1)
-                    else:
-                        await client.publish('led2', 'flase', qos = 1)
-                except OSError as e:
-                    print("sin sensor temperatura")
+                x.update({"temperatura":d.temperature()})
+                x.update({"humedad":d.humidity()})
+                b = json.dumps(x)
+                await client.publish('/sensores_remoto/24dcc399d76c', '{}'.format(b), qos = 1)
             except OSError as e:
                 print("sin sensor humedad")
         except OSError as e:
             print("sin sensor")
-        await asyncio.sleep(30)  # Broker is slow
+        await asyncio.sleep(10)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
@@ -66,7 +58,6 @@ config['ssl'] = True
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
-
 try:
     asyncio.run(main(client))
 finally:
