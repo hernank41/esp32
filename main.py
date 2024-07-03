@@ -43,12 +43,16 @@ async def main(client):
                 x.update({"humedad":d.humidity()})
                 b = json.dumps(x)
                 await client.publish('/sensores_remoto/24dcc399d76c', '{}'.format(b), qos = 1)
+                if(led.value()):
+                    await client.publish('/sensores_remoto/24dcc399d76c/led2', '{}'.format('true'), qos = 1)
+                else:
+                    await client.publish('/sensores_remoto/24dcc399d76c/led2', '{}'.format('false'), qos = 1)
                 
             except OSError as e:
                 print("sin sensor humedad")
         except OSError as e:
             print("sin sensor")
-        await asyncio.sleep(10)  # Broker is slow
+        await asyncio.sleep(5)  # Broker is slow
 
 # Define configuration
 config['subs_cb'] = sub_cb
